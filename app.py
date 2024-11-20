@@ -16,7 +16,7 @@ def clean_url(url: str) -> str:
     return f'{parsed_url.path.lstrip("/")}'
 
 # Function to process and aggregate data
-def process_and_aggregate_data(input_url_files, cld_mapper_file, output_file):
+def process_and_aggregate_data(input_url_files, cld_mapper_file):
     final_result = pd.DataFrame()
     custom_column_names = ['This_week_2024_Total_session', 'Last_week_2024_Total_session', 'This_week_2023_Total_session']
     
@@ -34,14 +34,13 @@ def process_and_aggregate_data(input_url_files, cld_mapper_file, output_file):
         else:
             final_result = final_result.merge(result, left_index=True, right_index=True, how='outer')
     
-    final_result.to_excel(output_file, index=True)
     return final_result
 
 # Streamlit UI setup
 def main():
     st.title("Session Aggregation Tool")
     st.write("""
-    Upload three input files containing URLs, the CLD Mapper file, and specify the output folder where the result will be saved.
+    Upload three input files containing URLs, the CLD Mapper file, and let the app process the data and provide a download link.
     """)
 
     # File uploaders for input files
@@ -52,27 +51,39 @@ def main():
     # File uploader for the CLD Mapper file
     cld_mapper_file = st.file_uploader("Select CLD Mapper Excel File", type=["xlsx", "xls"])
 
-    # Folder path for saving output file
-    output_folder = st.text_input("Enter Output Folder Path (e.g., '/path/to/output')")
-
     # Button to trigger the aggregation process
     if st.button("Run Aggregation"):
-        if not input_file_1 or not input_file_2 or not input_file_3 or not cld_mapper_file or not output_folder:
+        if not input_file_1 or not input_file_2 or not input_file_3 or not cld_mapper_file:
             st.error("Please make sure all fields are filled.")
         else:
             try:
                 # Process the files
                 input_files = [input_file_1, input_file_2, input_file_3]
-                output_file = os.path.join(output_folder, "aggregated_data.xlsx")
                 
                 # Convert file-like objects to actual file paths (needed for pandas to read)
                 input_files_paths = [file.name for file in input_files]
                 mapper_file_path = cld_mapper_file.name
 
-                result_df = process_and_aggregate_data(input_files_paths, mapper_file_path, output_file)
-                
-                st.success(f"Aggregated data has been saved to: {output_file}")
-                st.dataframe(result_df)  # Display the result
+                # Process the data
+                result_df = process_and_aggregate_data(input_files_paths, mapper_file_path)
+
+                # Convert result to a BytesIO object for download
+                import io
+                output = io.BytesIO()
+                result_df.to_excel(output, index=True, engine='openpyxl')
+                output.seek(0)
+
+                # Provide a download link
+                st.success("Aggregation completed successfully! Click below to download the result.")
+                st.download_button(
+                    label="Download Aggregated Data",
+                    data=output,
+                    file_name="aggregated_data.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+                # Optionally, display the dataframe in the app
+                st.dataframe(result_df)
 
             except Exception as e:
                 st.error(f"An error occurred: {e}")
