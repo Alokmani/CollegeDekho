@@ -6,23 +6,31 @@ import io
 
 # Function to clean URL with additional conditions
 def clean_url(url: str) -> str:
-    # Remove '/college/' and '/colleges/' from the URL
+    # Remove unwanted terms from the URL
+    unwanted_terms = [
+        '-courses', '-pictures', '-admission', '-connect', '-campus', '-placement', '-reviews', '-scholarship',
+        '/reviews', '/cut-off', '/courses_fees', '/pictures', '/admission', '/campus'
+    ]
+
     cleaned_url = url.replace('/colleges/', '').replace('/college/', '')
+
+    for term in unwanted_terms:
+        cleaned_url = cleaned_url.replace(term, '')
+
     if '-dpid' in cleaned_url:
         cleaned_url = cleaned_url.split('-dpid')[0]
     if '-dp' in cleaned_url:
         cleaned_url = cleaned_url.split('-dp')[0]
     if '-cpd' in cleaned_url:
         cleaned_url = cleaned_url.split('-cpd')[0]
+
     parsed_url = urllib.parse.urlparse(cleaned_url)
     return f'{parsed_url.path.lstrip("/")}'
-
 
 # Normalize column names to lowercase
 def normalize_columns(df):
     df.columns = df.columns.str.lower()
     return df
-
 
 # Function to process and aggregate data
 def process_and_aggregate_data(input_url_files, mapper_file, website_type):
@@ -70,7 +78,6 @@ def process_and_aggregate_data(input_url_files, mapper_file, website_type):
             final_result = final_result.merge(result, left_index=True, right_index=True, how='outer')
 
     return final_result
-
 
 # Streamlit UI setup
 def main():
@@ -141,10 +148,5 @@ def main():
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
-
 if __name__ == "__main__":
     main()
-
-
-
-
